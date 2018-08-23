@@ -46,7 +46,7 @@ Wrocław.
 Find shortest route
 -------------------
 
-Endpoint do wyszukiwania najkrótszej trasy pomiędzy dwoma miastami.
+Endpoint do wyszukiwania najkrótszej trasy pomiędzy dwoma miastami (mój dopisek: najkrótszej tj. z najmniejszą liczbą przesiadek).
 Zwraca wiele tras jeśli mają tę samą długość.
 
 **HTTP REQUEST**
