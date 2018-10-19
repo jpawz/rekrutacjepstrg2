@@ -16,6 +16,7 @@ import org.junit.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
+import com.example.rekrutacjepstrg2.cache.RouteCache;
 import com.example.rekrutacjepstrg2.domain.Route;
 import com.example.rekrutacjepstrg2.domain.Train;
 import com.example.rekrutacjepstrg2.repository.TrainRepository;
@@ -72,6 +73,7 @@ public class RouteServiceImplTest {
 	public void setup() {
 		MockitoAnnotations.initMocks(this);
 		routeService = new RouteServiceImpl(repository);
+		RouteCache.INSTANCE.clearCache();
 	}
 
 	@Test
@@ -92,8 +94,8 @@ public class RouteServiceImplTest {
 	@Test
 	public void shouldReturnTwoRoutesAndStopSearching() {
 		// given
-		given(repository.findByStart(warszawa)).willReturn(
-				Optional.of(Arrays.asList(warszawaBydgoszczTrain, warszawaOlsztynTrain,
+		given(repository.findByStart(warszawa))
+				.willReturn(Optional.of(Arrays.asList(warszawaBydgoszczTrain, warszawaOlsztynTrain,
 						warszawaLodzTrain, warszawaWarkaTrain, warszawaTychTrain)));
 		given(repository.findByStart(bydgoszcz))
 				.willReturn(Optional.ofNullable(Arrays.asList(bydgoszczGdansTrain)));
@@ -101,8 +103,8 @@ public class RouteServiceImplTest {
 				.willReturn(Optional.ofNullable(Arrays.asList(olsztynGdansTrain)));
 		given(repository.findByStart(lodz))
 				.willReturn(Optional.ofNullable(Arrays.asList(lodzPoznanTrain)));
-		given(repository.findByStart(warka)).willReturn(Optional
-				.ofNullable(Arrays.asList(warkaLezajskTrain, warkaWarszawaTrain)));
+		given(repository.findByStart(warka)).willReturn(
+				Optional.ofNullable(Arrays.asList(warkaLezajskTrain, warkaWarszawaTrain)));
 		given(repository.findByStart(tychy))
 				.willReturn(Optional.ofNullable(Arrays.asList(tychyZywiecTrain)));
 		given(repository.findByStart(poznan))
@@ -128,5 +130,18 @@ public class RouteServiceImplTest {
 
 		// then
 		assertThat(routes).isEmpty();
+	}
+
+	@Test
+	public void shouldReturnCachedRoutes() {
+		// given
+		RouteCache.INSTANCE.addRoutes(warszawa, gdansk, Arrays.asList(warszawaGdansRoute));
+
+		// when
+		List<Route> routes = routeService.findShortestRoute(warszawa, gdansk);
+
+		// then
+		verify(repository, never()).findByStartAndDestination(any(), any());
+		assertThat(routes).contains(warszawaGdansRoute);
 	}
 }

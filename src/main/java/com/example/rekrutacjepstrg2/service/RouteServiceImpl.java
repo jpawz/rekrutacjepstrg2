@@ -12,6 +12,7 @@ import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import com.example.rekrutacjepstrg2.cache.RouteCache;
 import com.example.rekrutacjepstrg2.domain.Route;
 import com.example.rekrutacjepstrg2.domain.Train;
 import com.example.rekrutacjepstrg2.repository.TrainRepository;
@@ -28,15 +29,23 @@ public class RouteServiceImpl implements RouteService {
 
 	@Override
 	public List<Route> findShortestRoute(final String start, final String destination) {
+		if (RouteCache.INSTANCE.hasCachedRoutes(start, destination)) {
+			return RouteCache.INSTANCE.getRoutes(start, destination);
+		}
+
 		List<Route> routes = new ArrayList<>();
 
 		Route directRoute = findDirectRoute(start, destination);
 		if (directRoute != null) {
 			routes.add(directRoute);
+			RouteCache.INSTANCE.addRoutes(start, destination, routes);
 			return routes;
 		}
 
 		routes = findShortestUndirectRoutes(start, destination);
+		if (!routes.isEmpty()) {
+			RouteCache.INSTANCE.addRoutes(start, destination, routes);
+		}
 
 		return routes;
 	}
@@ -45,12 +54,11 @@ public class RouteServiceImpl implements RouteService {
 	 * Finds direct route between start and destination.
 	 * @param start - start of route
 	 * @param destination - destination of route
-	 * @return {@link com.example.rekrutacjepstrg2.domain.Route Route} object or null if
-	 * direct route didn't exist
+	 * @return {@link com.example.rekrutacjepstrg2.domain.Route Route} object or null if direct
+	 * route didn't exist
 	 */
 	private Route findDirectRoute(final String start, final String destination) {
-		Train train = repository.findByStartAndDestination(start, destination)
-				.orElse(null);
+		Train train = repository.findByStartAndDestination(start, destination).orElse(null);
 		if (train != null)
 			return new Route(start, destination);
 		else
@@ -61,11 +69,10 @@ public class RouteServiceImpl implements RouteService {
 	 * Finds shortest routes from start to destination.
 	 * @param start - start of route
 	 * @param destination - destination of route
-	 * @return List of {@link com.example.rekrutacjepstrg2.domain.Route Route} or empty
-	 * list when no routes were found
+	 * @return List of {@link com.example.rekrutacjepstrg2.domain.Route Route} or empty list when no
+	 * routes were found
 	 */
-	private List<Route> findShortestUndirectRoutes(final String start,
-			final String destination) {
+	private List<Route> findShortestUndirectRoutes(final String start, final String destination) {
 
 		List<Route> routesFromStartToDestination = new ArrayList<>();
 		Set<String> visitedStations = new HashSet<>();
@@ -94,8 +101,7 @@ public class RouteServiceImpl implements RouteService {
 			}
 
 			List<String> nextUnvisitedStations = repository.findByStart(lastStation)
-					.orElse(Collections.emptyList()).stream()
-					.map(train -> train.getDestination())
+					.orElse(Collections.emptyList()).stream().map(train -> train.getDestination())
 					.filter(station -> !visitedStations.contains(station))
 					.collect(Collectors.toList());
 
@@ -114,11 +120,10 @@ public class RouteServiceImpl implements RouteService {
 	}
 
 	/**
-	 * Makes {@link com.example.rekrutacjepstrg2.domain.Route Route} object from List of
-	 * Strings.
+	 * Makes {@link com.example.rekrutacjepstrg2.domain.Route Route} object from List of Strings.
 	 * @param stations - stations on the route
-	 * @return {@link com.example.rekrutacjepstrg2.domain.Route Route} from stations with
-	 * preserving order
+	 * @return {@link com.example.rekrutacjepstrg2.domain.Route Route} from stations with preserving
+	 * order
 	 */
 	private Route makeRouteFromStations(final List<String> stations) {
 		Route route = new Route();
